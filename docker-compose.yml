@@ -1,16 +1,9 @@
 
 services:
-  app:
-    build: .
-    volumes:
-      - .:/django
-    ports:
-      - "8000:8000"
-    image: app:django
-    container_name: django_container
-    command: python manage.py runserver 0.0.0.0:8000
-    depends_on:
-      - db
+  redis:
+    image: redis:alpine
+    container_name: redis
+
   db:
     image: postgres
     volumes:
@@ -20,3 +13,29 @@ services:
       POSTGRES_USER: myuser
       POSTGRES_PASSWORD: mypassword
     container_name: postgres_container
+  app:
+    build: .
+    volumes:
+      - .:/django
+    ports:
+      - "8000:8000"
+    image: app:django
+    container_name: django_app
+    command: python manage.py runserver 0.0.0.0:8000
+    depends_on:
+      - db
+  
+  celery:
+    restart: always
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A core worker --loglevel=info
+    volumes:
+      - .:/django
+    container_name: celery
+    depends_on:
+      - redis
+      - db
+      - app
+  
